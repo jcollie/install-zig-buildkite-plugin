@@ -1,0 +1,11 @@
+name: Zig Installer
+description: Install the Zig programming language
+author: https://git.ocjtech.us/jeff/
+requirements:
+  - nu
+  - minisign
+configuration:
+  properties:
+    version:
+      type: string
+  additionalProperties: false
