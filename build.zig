@@ -12,11 +12,25 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
             .imports = &.{},
         }),
-        .use_lld = false,
-        .use_llvm = false,
     });
 
-    b.installArtifact(exe);
+    const update = b.addUpdateSourceFiles();
+    b.getInstallStep().dependOn(&update.step);
+    const install_exe = b.addInstallArtifact(exe, .{});
+    if (install_exe.emitted_bin) |bin| update.addCopyFileToSource(
+        bin,
+        switch (target.result.os.tag) {
+            .windows => "hooks/pre-command.exe",
+            else => b.fmt(
+                "hooks/pre-command-{t}-{t}",
+                .{
+                    target.result.os.tag,
+                    target.result.cpu.arch,
+                },
+            ),
+        },
+    );
+
     const run_step = b.step("run", "Run the app");
     const run_cmd = b.addRunArtifact(exe);
     run_step.dependOn(&run_cmd.step);
