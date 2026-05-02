@@ -49,7 +49,7 @@ pub fn init(io: std.Io, alloc: std.mem.Allocator, env_map: *std.process.Environ.
             break :posix std.mem.trimEnd(u8, tmpdir, &.{std.fs.path.sep});
         },
     };
-    errdefer {
+    defer {
         switch (builtin.os.tag) {
             .windows => alloc.free(tmppath),
             else => {},
