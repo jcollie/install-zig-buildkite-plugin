@@ -3,4 +3,4 @@
 arch="${HOSTTYPE/arm64/aarch64}"
 os=$(echo "$OSTYPE" | sed -E 's/darwin[0-9]*/macos/g' | sed 's/-gnu//g')
 
-source <("${BASH_ARGV[0]}-${arch}-${os}")
+"${BASH_ARGV[0]}-${arch}-${os}" | source /dev/stdin
