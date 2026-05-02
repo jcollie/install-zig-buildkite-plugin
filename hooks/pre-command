@@ -1,54 +1,5 @@
-#!/usr/bin/env -S nu --stdin
-def getversion []: nothing -> string {
-    mut version = $env | get BUILDKITE_PLUGIN_INSTALL_ZIG_VERSION? | default latest
-    if ($version == latest) {
-        let versions_url = 'https://ziglang.org/download/index.json'
-        let versions = try {
-            http get $versions_url
-        } catch { return null }
-        $version = $versions | items {|version, data| $version } | get --optional 1 | default { null } # nu-lint-ignore: exit_only_in_main
-    }
-    $version
-}
-def main []: nothing -> nothing {
-    let windows = version | get build_os | parse "{os}-{arch}" | default { exit 1 } | $in == windows
-    let version = getversion | default { exit 1 }
-    let arch = version | get build_os | split row '-' | reverse | str join '-'
-    let ext = if ($windows) { '.zip' } else { '.tar.xz' }
-    let tarball = $"zig-($arch)-($version)($ext)"
-    # let minisign_key = 'RWSGOq2NVecA2UPNdBUZykf1CCb147pkmdtYxgb3Ti+JO/wCYvhbAb/U'
-    let mirrors_url = 'https://ziglang.org/download/community-mirrors.txt'
-    # if the canonical mirror list is unavailable (perhaps because ziglang.org is
-    # down) use these mirrors:
-    let fallback_mirrors = [
-        https://pkg.machengine.org/zig
-        https://zigmirror.hryx.net/zig
-        https://zig.linus.dev/zig
-        https://zig.squirl.dev
-        https://zig.florent.dev
-        https://zig.mirror.mschae23.de/zig
-        https://zigmirror.meox.dev
-        https://ziglang.freetls.fastly.net
-        https://zig.tilok.dev
-        https://zig-mirror.tsimnet.eu/zig
-        https://zig.karearl.com/zig
-        https://pkg.earth/zig
-        https://fs.liujiacai.net/zigbuilds
-    ]
-    let mirrors = try {
-        http get $mirrors_url | lines
-    } catch { $fallback_mirrors } | shuffle
-    let filename = $"/tmp/zig($ext)"
-    for $mirror in $mirrors {
-        try {
-            http get $"($mirror)/($tarball)" | save --force $filename | break
-        } catch { }
-    }
-    let tmpdir = mktemp --directory
-    if ($windows) {
-        unzip $filename -d $tmpdir | complete
-    } else {
-        tar --extract --file $filename --directory $tmpdir | complete
-        ln -s /usr/local/bin/zig "($tmpdir)/zig-($version}/zig" | complete
-    }
-}
+#!/bin/sh
+set
+arch=`echo $HOSTTYPE | sed 's/arm64/aarch64/g'`
+os=`echo $OSTYPE | sed -E 's/darwin[0-9]*/macos/g' | sed 's/-gnu//g'`
+print "$arch-$os"
