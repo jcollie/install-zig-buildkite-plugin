@@ -1,6 +1,9 @@
 #!/bin/bash
 
+output=$(mktemp)
+
 arch="${HOSTTYPE/arm64/aarch64}"
 os=$(echo "$OSTYPE" | sed -E 's/darwin[0-9]*/macos/g' | sed 's/-gnu//g')
 
-eval `"${BASH_ARGV[0]}-${arch}-${os}"`
+"${BASH_ARGV[0]}-${arch}-${os}" > $output
+source $output
