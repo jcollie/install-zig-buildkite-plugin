@@ -2,4 +2,5 @@
 set
 arch=`echo $HOSTTYPE | sed 's/arm64/aarch64/g'`
 os=`echo $OSTYPE | sed -E 's/darwin[0-9]*/macos/g' | sed 's/-gnu//g'`
-print "$arch-$os"
+printf "$arch-$os"
+printf "$0"
