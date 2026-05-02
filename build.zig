@@ -104,6 +104,10 @@ pub fn buildExe(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.b
                     .module = win32_dep.module("win32"),
                 },
             },
+            .strip = switch (optimize) {
+                .Debug => false,
+                .ReleaseSafe, .ReleaseSmall, .ReleaseFast => true,
+            },
         }),
     });
     return exe;
