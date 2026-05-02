@@ -1,6 +1,8 @@
-#!/bin/sh
+#!/bin/bash
 set
-arch=`echo $HOSTTYPE | sed 's/arm64/aarch64/g'`
-os=`echo $OSTYPE | sed -E 's/darwin[0-9]*/macos/g' | sed 's/-gnu//g'`
-printf "$arch-$os"
-printf "$0"
+arch=$(echo "$HOSTTYPE" | sed 's/arm64/aarch64/g')
+export arch
+os=$(echo "$OSTYPE" | sed -E 's/darwin[0-9]*/macos/g' | sed 's/-gnu//g')
+printf "%s-%s" "$arch" "$os"
+printf "%s\n" "$0"
+printf "%s\n" "$1"
