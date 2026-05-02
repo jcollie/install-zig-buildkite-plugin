@@ -1,8 +1,6 @@
 #!/bin/bash
 set
-arch=$(echo "$HOSTTYPE" | sed 's/arm64/aarch64/g')
-export arch
+arch="${HOSTTYPE/arm64/aarch64}"
 os=$(echo "$OSTYPE" | sed -E 's/darwin[0-9]*/macos/g' | sed 's/-gnu//g')
-printf "%s-%s" "$arch" "$os"
-printf "%s\n" "$0"
-printf "%s\n" "$1"
+printf "%s-%s\n" "$arch" "$os"
+printf "%s\n" "${BASH_ARGV[0]}"
