@@ -5,7 +5,10 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     const exe = b.addExecutable(.{
-        .name = b.fmt("install-zig-{t}-{t}", .{ target.result.os.tag, target.result.cpu.arch }),
+        .name = b.fmt("install-zig-{t}-{t}", .{
+            target.result.cpu.arch,
+            target.result.os.tag,
+        }),
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/main.zig"),
             .target = target,
@@ -24,8 +27,8 @@ pub fn build(b: *std.Build) void {
             else => b.fmt(
                 "hooks/pre-command-{t}-{t}",
                 .{
-                    target.result.os.tag,
                     target.result.cpu.arch,
+                    target.result.os.tag,
                 },
             ),
         },
