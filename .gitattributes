@@ -1,3 +1,2 @@
 * text eol=lf
 /hooks/pre-command-* binary
-/hooks/pre-command.exe binary

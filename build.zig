@@ -14,6 +14,11 @@ pub fn build(b: *std.Build) void {
                 .os_tag = .linux,
             }),
             b.resolveTargetQuery(.{
+                .cpu_arch = .x86_64,
+                .cpu_model = .baseline,
+                .os_tag = .windows,
+            }),
+            b.resolveTargetQuery(.{
                 .cpu_arch = .aarch64,
                 .cpu_model = .baseline,
                 .os_tag = .linux,
@@ -24,7 +29,7 @@ pub fn build(b: *std.Build) void {
                 .os_tag = .macos,
             }),
             b.resolveTargetQuery(.{
-                .cpu_arch = .x86_64,
+                .cpu_arch = .aarch64,
                 .cpu_model = .baseline,
                 .os_tag = .windows,
             }),
@@ -35,16 +40,14 @@ pub fn build(b: *std.Build) void {
             const install_exe = b.addInstallArtifact(exe, .{});
             if (install_exe.emitted_bin) |bin| update.addCopyFileToSource(
                 bin,
-                switch (target.result.os.tag) {
-                    .windows => "hooks/pre-command.exe",
-                    else => b.fmt(
-                        "hooks/pre-command-{t}-{t}",
-                        .{
-                            target.result.cpu.arch,
-                            target.result.os.tag,
-                        },
-                    ),
-                },
+                b.fmt(
+                    "hooks/pre-command-{t}-{t}{s}",
+                    .{
+                        target.result.cpu.arch,
+                        target.result.os.tag,
+                        if (target.result.os.tag == .windows) ".exe" else "",
+                    },
+                ),
             );
         }
     }

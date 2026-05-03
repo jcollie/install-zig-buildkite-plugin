@@ -73,7 +73,15 @@ pub fn main(init: std.process.Init) !void {
     var stdout_writer: std.Io.File.Writer = .init(.stdout(), io, &stdout_buffer);
     const stdout = &stdout_writer.interface;
 
-    try stdout.print("PATH={s}", .{dir});
+    switch (builtin.os.tag) {
+        .windows => {
+            try stdout.writeAll("$env:PATH = \"");
+        },
+        else => {
+            try stdout.writeAll("PATH=\"");
+        },
+    }
+    try stdout.writeAll(dir);
     if (init.environ_map.get("PATH")) |path| {
         var it = std.mem.tokenizeScalar(u8, path, std.fs.path.delimiter);
         while (it.next()) |item| {
@@ -81,7 +89,16 @@ pub fn main(init: std.process.Init) !void {
             try stdout.writeAll(item);
         }
     }
-    try stdout.writeByte('\n');
-    try stdout.writeAll("export PATH\n");
+
+    switch (builtin.os.tag) {
+        .windows => {
+            try stdout.writeAll("\"\r\n");
+        },
+        else => {
+            try stdout.writeAll("\"\n");
+            try stdout.writeAll("export PATH\n");
+        },
+    }
+
     try stdout.flush();
 }
