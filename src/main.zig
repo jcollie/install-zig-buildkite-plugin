@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: © 2026 Jeffrey C. Ollie <jeff@ocjtech.us>
+// SPDX-License-Identifier: MIT
+
 const std = @import("std");
 const builtin = @import("builtin");
 
@@ -9,6 +12,7 @@ const Data = @import("Data.zig");
 const ZigIndex = @import("ZigIndex.zig");
 const ZigRelease = @import("ZigRelease.zig");
 const Mirrors = @import("Mirrors.zig");
+const BashDoubleQuotedStringWriter = @import("BashDoubleQuotedStringWriter.zig");
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
@@ -73,32 +77,28 @@ pub fn main(init: std.process.Init) !void {
     var stdout_writer: std.Io.File.Writer = .init(.stdout(), io, &stdout_buffer);
     const stdout = &stdout_writer.interface;
 
-    switch (builtin.os.tag) {
-        .windows => {
-            try stdout.writeAll("$env:PATH = \"");
-        },
-        else => {
-            try stdout.writeAll("PATH=\"");
-        },
-    }
-    try stdout.writeAll(dir);
-    if (init.environ_map.get("PATH")) |path| {
-        var it = std.mem.tokenizeScalar(u8, path, std.fs.path.delimiter);
-        while (it.next()) |item| {
-            try stdout.writeByte(std.fs.path.delimiter);
-            try stdout.writeAll(item);
+    try stdout.writeAll("PATH=\"");
+
+    {
+        var double_quoted_string_buffer: [128]u8 = undefined;
+        var double_quoted_string_writer: BashDoubleQuotedStringWriter = .init(stdout, &double_quoted_string_buffer);
+        const dqsw = &double_quoted_string_writer.interface;
+
+        try dqsw.writeAll(dir);
+
+        if (init.environ_map.get("PATH")) |path| {
+            var it = std.mem.tokenizeScalar(u8, path, std.fs.path.delimiter);
+            while (it.next()) |item| {
+                try dqsw.writeByte(std.fs.path.delimiter);
+                try dqsw.writeAll(item);
+            }
         }
+
+        try dqsw.flush();
     }
 
-    switch (builtin.os.tag) {
-        .windows => {
-            try stdout.writeAll("\"\r\n");
-        },
-        else => {
-            try stdout.writeAll("\"\n");
-            try stdout.writeAll("export PATH\n");
-        },
-    }
+    try stdout.writeAll("\"\n");
+    try stdout.writeAll("export PATH\n");
 
     try stdout.flush();
 }

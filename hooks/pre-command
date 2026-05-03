@@ -1,9 +1,12 @@
 #!/bin/bash
 
+# SPDX-FileCopyrightText: © 2026 Jeffrey C. Ollie <jeff@ocjtech.us>
+# SPDX-License-Identifier: MIT
+
 output=$(mktemp)
 
 arch="${HOSTTYPE/arm64/aarch64}"
 os=$(echo "$OSTYPE" | sed -E 's/darwin[0-9]*/macos/g' | sed 's/-gnu//g')
 
-"${BASH_ARGV[0]}-${arch}-${os}" > $output
-source $output
+"${BASH_ARGV[0]}-${arch}-${os}" > "$output"
+source "$output"

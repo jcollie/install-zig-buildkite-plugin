@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: © 2026 Jeffrey C. Ollie <jeff@ocjtech.us>
+# SPDX-License-Identifier: MIT
+
 name: Zig Installer
 description: Install the Zig programming language
 author: https://git.ocjtech.us/jeff/
