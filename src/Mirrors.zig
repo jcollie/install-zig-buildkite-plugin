@@ -109,9 +109,6 @@ pub fn download(
     client: *std.http.Client,
     data: *const Data,
 ) !std.meta.Tuple(&.{ []const u8, []const u8 }) {
-    const tmpdir: TmpDir = try .init(io, gpa, env_map, .{});
-    defer tmpdir.deinit(io, gpa);
-
     for (self.mirrors) |mirror| {
         const url = try data.resolve(gpa, mirror);
         defer gpa.free(url);
@@ -155,8 +152,11 @@ pub fn download(
             if (!std.mem.eql(u8, expected, &actual)) return error.HashMismatch;
         }
 
-        switch (builtin.os.tag) {
-            .windows => {
+        var tmpdir: TmpDir = try .init(io, gpa, env_map, .{ .delete_on_deinit = true });
+        defer tmpdir.deinit(io, gpa);
+
+        const root_dir = switch (builtin.os.tag) {
+            .windows => dir: {
                 const ziptmp: TmpDir = try .init(io, gpa, env_map, .{ .delete_on_deinit = true });
                 defer ziptmp.deinit(io, gpa);
 
@@ -174,44 +174,58 @@ pub fn download(
                 var read_buffer: [1024]u8 = undefined;
                 var reader = zipfile.reader(io, &read_buffer);
 
-                try std.zip.extract(tmpdir.dir, &reader, .{});
+                var diagnostics: std.zip.Diagnostics = .{ .allocator = gpa };
+                defer diagnostics.deinit();
+
+                try std.zip.extract(tmpdir.dir, &reader, .{ .diagnostics = &diagnostics });
+
+                if (diagnostics.root_dir.len == 0) {
+                    log.warn("archive did not have a single root dir", .{});
+                    continue;
+                }
+
+                break :dir try gpa.dupe(u8, diagnostics.root_dir);
             },
-            else => {
+            else => dir: {
                 var reader: std.Io.Reader = .fixed(artifact_writer.written());
+
                 const xz_buffer = try gpa.alloc(u8, 1024);
                 var xz: std.compress.xz.Decompress = try .init(&reader, gpa, xz_buffer);
                 defer xz.deinit();
-                try std.tar.extract(io, tmpdir.dir, &xz.reader, .{});
-            },
-        }
-        break;
-    }
 
-    var it = tmpdir.dir.iterate();
-    while (try it.next(io)) |entry| {
-        switch (entry.kind) {
-            .directory => {
-                const subdir = try tmpdir.dir.openDir(io, entry.name, .{});
-                const stat = subdir.statFile(io, zig_executable, .{}) catch {
+                var diagnostics: std.tar.Diagnostics = .{ .allocator = gpa };
+                defer diagnostics.deinit();
+
+                try std.tar.extract(io, tmpdir.dir, &xz.reader, .{ .diagnostics = &diagnostics });
+
+                if (diagnostics.root_dir.len == 0) {
+                    log.warn("archive did not have a single root dir", .{});
                     continue;
-                };
-                switch (stat.kind) {
-                    .file => {
-                        subdir.access(io, zig_executable, .{ .execute = true }) catch |err| {
-                            log.warn("zig executable doesn not appear to be executable: {t}", .{err});
-                            continue;
-                        };
-                        const dir = try std.fs.path.join(gpa, &.{ tmpdir.path, entry.name });
-                        errdefer gpa.free(dir);
-                        const path = try std.fs.path.join(gpa, &.{ tmpdir.path, entry.name, zig_executable });
-                        errdefer gpa.free(path);
-                        return .{ dir, path };
-                    },
-                    else => {},
                 }
+
+                break :dir try gpa.dupe(u8, diagnostics.root_dir);
             },
-            else => {},
-        }
+        };
+
+        defer gpa.free(root_dir);
+        log.info("subdir: {s}", .{root_dir});
+
+        const subdir = try tmpdir.dir.openDir(io, root_dir, .{});
+        defer subdir.close(io);
+
+        subdir.access(io, zig_executable, .{ .execute = true }) catch |err| {
+            log.warn("zig executable doesn not appear to be executable: {t}", .{err});
+            continue;
+        };
+
+        const dir = try std.fs.path.join(gpa, &.{ tmpdir.path, root_dir });
+        errdefer gpa.free(dir);
+
+        const path = try std.fs.path.join(gpa, &.{ tmpdir.path, root_dir, zig_executable });
+        errdefer gpa.free(path);
+
+        tmpdir.delete_on_deinit = false;
+        return .{ dir, path };
     }
 
     return error.ZigExecutableNotFound;
